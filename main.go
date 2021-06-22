@@ -39,6 +39,7 @@ func main() {
 func CreateUser(ctx context.Context, client *ent.Client, nickname string) (*ent.User, error) {
 	u, err := client.User.
 		Create().
+		SetID("dummyId").
 		SetName(nickname).
 		Save(ctx)
 	if err != nil {

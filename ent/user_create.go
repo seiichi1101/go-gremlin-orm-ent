@@ -26,6 +26,12 @@ func (uc *UserCreate) SetName(s string) *UserCreate {
 	return uc
 }
 
+// SetID sets the "id" field.
+func (uc *UserCreate) SetID(s string) *UserCreate {
+	uc.mutation.SetID(s)
+	return uc
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uc *UserCreate) Mutation() *UserMutation {
 	return uc.mutation
@@ -52,7 +58,10 @@ func (uc *UserCreate) Save(ctx context.Context) (*User, error) {
 				return nil, err
 			}
 			uc.mutation = mutation
-			node, err = uc.gremlinSave(ctx)
+			if node, err = uc.gremlinSave(ctx); err != nil {
+				return nil, err
+			}
+			mutation.id = &node.ID
 			mutation.done = true
 			return node, err
 		})
@@ -101,6 +110,9 @@ func (uc *UserCreate) gremlinSave(ctx context.Context) (*User, error) {
 
 func (uc *UserCreate) gremlin() *dsl.Traversal {
 	v := g.AddV(user.Label)
+	if id, ok := uc.mutation.ID(); ok {
+		v.Property(dsl.ID, id)
+	}
 	if value, ok := uc.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
 	}
