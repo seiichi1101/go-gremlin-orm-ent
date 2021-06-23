@@ -14,6 +14,8 @@ type User struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
+	// Age holds the value of the "age" field.
+	Age int `json:"age,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 }
@@ -26,12 +28,14 @@ func (u *User) FromResponse(res *gremlin.Response) error {
 	}
 	var scanu struct {
 		ID   string `json:"id,omitempty"`
+		Age  int    `json:"age,omitempty"`
 		Name string `json:"name,omitempty"`
 	}
 	if err := vmap.Decode(&scanu); err != nil {
 		return err
 	}
 	u.ID = scanu.ID
+	u.Age = scanu.Age
 	u.Name = scanu.Name
 	return nil
 }
@@ -59,6 +63,8 @@ func (u *User) String() string {
 	var builder strings.Builder
 	builder.WriteString("User(")
 	builder.WriteString(fmt.Sprintf("id=%v", u.ID))
+	builder.WriteString(", age=")
+	builder.WriteString(fmt.Sprintf("%v", u.Age))
 	builder.WriteString(", name=")
 	builder.WriteString(u.Name)
 	builder.WriteByte(')')
@@ -76,6 +82,7 @@ func (u *Users) FromResponse(res *gremlin.Response) error {
 	}
 	var scanu []struct {
 		ID   string `json:"id,omitempty"`
+		Age  int    `json:"age,omitempty"`
 		Name string `json:"name,omitempty"`
 	}
 	if err := vmap.Decode(&scanu); err != nil {
@@ -84,6 +91,7 @@ func (u *Users) FromResponse(res *gremlin.Response) error {
 	for _, v := range scanu {
 		*u = append(*u, &User{
 			ID:   v.ID,
+			Age:  v.Age,
 			Name: v.Name,
 		})
 	}

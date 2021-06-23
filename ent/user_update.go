@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
+	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 )
 
@@ -26,9 +27,30 @@ func (uu *UserUpdate) Where(ps ...predicate.User) *UserUpdate {
 	return uu
 }
 
+// SetAge sets the "age" field.
+func (uu *UserUpdate) SetAge(i int) *UserUpdate {
+	uu.mutation.ResetAge()
+	uu.mutation.SetAge(i)
+	return uu
+}
+
+// AddAge adds i to the "age" field.
+func (uu *UserUpdate) AddAge(i int) *UserUpdate {
+	uu.mutation.AddAge(i)
+	return uu
+}
+
 // SetName sets the "name" field.
 func (uu *UserUpdate) SetName(s string) *UserUpdate {
 	uu.mutation.SetName(s)
+	return uu
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableName(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetName(*s)
+	}
 	return uu
 }
 
@@ -44,12 +66,18 @@ func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(uu.hooks) == 0 {
+		if err = uu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = uu.gremlinSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*UserMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = uu.check(); err != nil {
+				return 0, err
 			}
 			uu.mutation = mutation
 			affected, err = uu.gremlinSave(ctx)
@@ -88,6 +116,16 @@ func (uu *UserUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (uu *UserUpdate) check() error {
+	if v, ok := uu.mutation.Age(); ok {
+		if err := user.AgeValidator(v); err != nil {
+			return &ValidationError{Name: "age", err: fmt.Errorf("ent: validator failed for field \"age\": %w", err)}
+		}
+	}
+	return nil
+}
+
 func (uu *UserUpdate) gremlinSave(ctx context.Context) (int, error) {
 	res := &gremlin.Response{}
 	query, bindings := uu.gremlin().Query()
@@ -108,6 +146,12 @@ func (uu *UserUpdate) gremlin() *dsl.Traversal {
 	var (
 		trs []*dsl.Traversal
 	)
+	if value, ok := uu.mutation.Age(); ok {
+		v.Property(dsl.Single, user.FieldAge, value)
+	}
+	if value, ok := uu.mutation.AddedAge(); ok {
+		v.Property(dsl.Single, user.FieldAge, __.Union(__.Values(user.FieldAge), __.Constant(value)).Sum())
+	}
 	if value, ok := uu.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
 	}
@@ -124,9 +168,30 @@ type UserUpdateOne struct {
 	mutation *UserMutation
 }
 
+// SetAge sets the "age" field.
+func (uuo *UserUpdateOne) SetAge(i int) *UserUpdateOne {
+	uuo.mutation.ResetAge()
+	uuo.mutation.SetAge(i)
+	return uuo
+}
+
+// AddAge adds i to the "age" field.
+func (uuo *UserUpdateOne) AddAge(i int) *UserUpdateOne {
+	uuo.mutation.AddAge(i)
+	return uuo
+}
+
 // SetName sets the "name" field.
 func (uuo *UserUpdateOne) SetName(s string) *UserUpdateOne {
 	uuo.mutation.SetName(s)
+	return uuo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableName(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetName(*s)
+	}
 	return uuo
 }
 
@@ -149,12 +214,18 @@ func (uuo *UserUpdateOne) Save(ctx context.Context) (*User, error) {
 		node *User
 	)
 	if len(uuo.hooks) == 0 {
+		if err = uuo.check(); err != nil {
+			return nil, err
+		}
 		node, err = uuo.gremlinSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*UserMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = uuo.check(); err != nil {
+				return nil, err
 			}
 			uuo.mutation = mutation
 			node, err = uuo.gremlinSave(ctx)
@@ -193,6 +264,16 @@ func (uuo *UserUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (uuo *UserUpdateOne) check() error {
+	if v, ok := uuo.mutation.Age(); ok {
+		if err := user.AgeValidator(v); err != nil {
+			return &ValidationError{Name: "age", err: fmt.Errorf("ent: validator failed for field \"age\": %w", err)}
+		}
+	}
+	return nil
+}
+
 func (uuo *UserUpdateOne) gremlinSave(ctx context.Context) (*User, error) {
 	res := &gremlin.Response{}
 	id, ok := uuo.mutation.ID()
@@ -218,6 +299,12 @@ func (uuo *UserUpdateOne) gremlin(id string) *dsl.Traversal {
 	var (
 		trs []*dsl.Traversal
 	)
+	if value, ok := uuo.mutation.Age(); ok {
+		v.Property(dsl.Single, user.FieldAge, value)
+	}
+	if value, ok := uuo.mutation.AddedAge(); ok {
+		v.Property(dsl.Single, user.FieldAge, __.Union(__.Values(user.FieldAge), __.Constant(value)).Sum())
+	}
 	if value, ok := uuo.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
 	}

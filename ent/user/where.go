@@ -81,10 +81,81 @@ func IDLTE(id string) predicate.User {
 	})
 }
 
+// Age applies equality check predicate on the "age" field. It's identical to AgeEQ.
+func Age(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.EQ(v))
+	})
+}
+
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.User {
 	return predicate.User(func(t *dsl.Traversal) {
 		t.Has(Label, FieldName, p.EQ(v))
+	})
+}
+
+// AgeEQ applies the EQ predicate on the "age" field.
+func AgeEQ(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.EQ(v))
+	})
+}
+
+// AgeNEQ applies the NEQ predicate on the "age" field.
+func AgeNEQ(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.NEQ(v))
+	})
+}
+
+// AgeIn applies the In predicate on the "age" field.
+func AgeIn(vs ...int) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.Within(v...))
+	})
+}
+
+// AgeNotIn applies the NotIn predicate on the "age" field.
+func AgeNotIn(vs ...int) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.Without(v...))
+	})
+}
+
+// AgeGT applies the GT predicate on the "age" field.
+func AgeGT(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.GT(v))
+	})
+}
+
+// AgeGTE applies the GTE predicate on the "age" field.
+func AgeGTE(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.GTE(v))
+	})
+}
+
+// AgeLT applies the LT predicate on the "age" field.
+func AgeLT(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.LT(v))
+	})
+}
+
+// AgeLTE applies the LTE predicate on the "age" field.
+func AgeLTE(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldAge, p.LTE(v))
 	})
 }
 

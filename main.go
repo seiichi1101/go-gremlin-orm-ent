@@ -20,27 +20,30 @@ func main() {
 
 	ctx := context.Background()
 
-	nickname := "seiichi"
-	u, err := CreateUser(ctx, client, nickname)
+	id := "dummyId"
+	age := 32
+	name := "seiichi"
+	u, err := CreateUser(ctx, client, id, age, name)
 	if err != nil {
 		log.Fatalf(err.Error())
 	} else {
-		log.Println("user returned: ", u)
+		log.Println("created user: ", u)
 	}
 
-	us, err := QueryUser(ctx, client, nickname)
+	us, err := SearchUsers(ctx, client, id)
 	if err != nil {
 		log.Fatalf(err.Error())
 	} else {
-		log.Println("user returned: ", us)
+		log.Println("searched users: ", us)
 	}
 }
 
-func CreateUser(ctx context.Context, client *ent.Client, nickname string) (*ent.User, error) {
+func CreateUser(ctx context.Context, client *ent.Client, id string, age int, name string) (*ent.User, error) {
 	u, err := client.User.
 		Create().
-		SetID("dummyId").
-		SetName(nickname).
+		SetID(id).
+		SetAge(age).
+		SetName(name).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating user: %w", err)
@@ -48,10 +51,10 @@ func CreateUser(ctx context.Context, client *ent.Client, nickname string) (*ent.
 	return u, nil
 }
 
-func QueryUser(ctx context.Context, client *ent.Client, nickname string) ([]*ent.User, error) {
+func SearchUsers(ctx context.Context, client *ent.Client, id string) ([]*ent.User, error) {
 	us, err := client.User.
 		Query().
-		Where(user.NameEQ(nickname)).
+		Where(user.IDEQ(id)).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed querying user: %w", err)

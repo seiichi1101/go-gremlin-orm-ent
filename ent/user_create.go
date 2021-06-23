@@ -20,9 +20,23 @@ type UserCreate struct {
 	hooks    []Hook
 }
 
+// SetAge sets the "age" field.
+func (uc *UserCreate) SetAge(i int) *UserCreate {
+	uc.mutation.SetAge(i)
+	return uc
+}
+
 // SetName sets the "name" field.
 func (uc *UserCreate) SetName(s string) *UserCreate {
 	uc.mutation.SetName(s)
+	return uc
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (uc *UserCreate) SetNillableName(s *string) *UserCreate {
+	if s != nil {
+		uc.SetName(*s)
+	}
 	return uc
 }
 
@@ -43,6 +57,7 @@ func (uc *UserCreate) Save(ctx context.Context) (*User, error) {
 		err  error
 		node *User
 	)
+	uc.defaults()
 	if len(uc.hooks) == 0 {
 		if err = uc.check(); err != nil {
 			return nil, err
@@ -84,10 +99,31 @@ func (uc *UserCreate) SaveX(ctx context.Context) *User {
 	return v
 }
 
+// defaults sets the default values of the builder before save.
+func (uc *UserCreate) defaults() {
+	if _, ok := uc.mutation.Name(); !ok {
+		v := user.DefaultName
+		uc.mutation.SetName(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (uc *UserCreate) check() error {
+	if _, ok := uc.mutation.Age(); !ok {
+		return &ValidationError{Name: "age", err: errors.New("ent: missing required field \"age\"")}
+	}
+	if v, ok := uc.mutation.Age(); ok {
+		if err := user.AgeValidator(v); err != nil {
+			return &ValidationError{Name: "age", err: fmt.Errorf("ent: validator failed for field \"age\": %w", err)}
+		}
+	}
 	if _, ok := uc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New("ent: missing required field \"name\"")}
+	}
+	if v, ok := uc.mutation.ID(); ok {
+		if err := user.IDValidator(v); err != nil {
+			return &ValidationError{Name: "id", err: fmt.Errorf("ent: validator failed for field \"id\": %w", err)}
+		}
 	}
 	return nil
 }
@@ -112,6 +148,9 @@ func (uc *UserCreate) gremlin() *dsl.Traversal {
 	v := g.AddV(user.Label)
 	if id, ok := uc.mutation.ID(); ok {
 		v.Property(dsl.ID, id)
+	}
+	if value, ok := uc.mutation.Age(); ok {
+		v.Property(dsl.Single, user.FieldAge, value)
 	}
 	if value, ok := uc.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
