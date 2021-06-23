@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
+	"entgo.io/ent/dialect/gremlin/graph/dsl/p"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -54,9 +55,45 @@ func (uu *UserUpdate) SetNillableName(s *string) *UserUpdate {
 	return uu
 }
 
+// AddCarIDs adds the "cars" edge to the Car entity by IDs.
+func (uu *UserUpdate) AddCarIDs(ids ...string) *UserUpdate {
+	uu.mutation.AddCarIDs(ids...)
+	return uu
+}
+
+// AddCars adds the "cars" edges to the Car entity.
+func (uu *UserUpdate) AddCars(c ...*Car) *UserUpdate {
+	ids := make([]string, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uu.AddCarIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
+}
+
+// ClearCars clears all "cars" edges to the Car entity.
+func (uu *UserUpdate) ClearCars() *UserUpdate {
+	uu.mutation.ClearCars()
+	return uu
+}
+
+// RemoveCarIDs removes the "cars" edge to Car entities by IDs.
+func (uu *UserUpdate) RemoveCarIDs(ids ...string) *UserUpdate {
+	uu.mutation.RemoveCarIDs(ids...)
+	return uu
+}
+
+// RemoveCars removes "cars" edges to Car entities.
+func (uu *UserUpdate) RemoveCars(c ...*Car) *UserUpdate {
+	ids := make([]string, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uu.RemoveCarIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -139,11 +176,19 @@ func (uu *UserUpdate) gremlinSave(ctx context.Context) (int, error) {
 }
 
 func (uu *UserUpdate) gremlin() *dsl.Traversal {
+	type constraint struct {
+		pred *dsl.Traversal // constraint predicate.
+		test *dsl.Traversal // test matches and its constant.
+	}
+	constraints := make([]*constraint, 0, 1)
 	v := g.V().HasLabel(user.Label)
 	for _, p := range uu.mutation.predicates {
 		p(v)
 	}
 	var (
+		rv = v.Clone()
+		_  = rv
+
 		trs []*dsl.Traversal
 	)
 	if value, ok := uu.mutation.Age(); ok {
@@ -155,7 +200,28 @@ func (uu *UserUpdate) gremlin() *dsl.Traversal {
 	if value, ok := uu.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
 	}
+	for _, id := range uu.mutation.RemovedCarsIDs() {
+		tr := rv.Clone().OutE(user.CarsLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		trs = append(trs, tr)
+	}
+	for _, id := range uu.mutation.CarsIDs() {
+		v.AddE(user.CarsLabel).To(g.V(id)).OutV()
+		constraints = append(constraints, &constraint{
+			pred: g.E().HasLabel(user.CarsLabel).InV().HasID(id).Count(),
+			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.CarsLabel, id)),
+		})
+	}
 	v.Count()
+	if len(constraints) > 0 {
+		constraints = append(constraints, &constraint{
+			pred: rv.Count(),
+			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
+		})
+		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		for _, cr := range constraints[1:] {
+			v = cr.pred.Coalesce(cr.test, v)
+		}
+	}
 	trs = append(trs, v)
 	return dsl.Join(trs...)
 }
@@ -195,9 +261,45 @@ func (uuo *UserUpdateOne) SetNillableName(s *string) *UserUpdateOne {
 	return uuo
 }
 
+// AddCarIDs adds the "cars" edge to the Car entity by IDs.
+func (uuo *UserUpdateOne) AddCarIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.AddCarIDs(ids...)
+	return uuo
+}
+
+// AddCars adds the "cars" edges to the Car entity.
+func (uuo *UserUpdateOne) AddCars(c ...*Car) *UserUpdateOne {
+	ids := make([]string, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uuo.AddCarIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
+}
+
+// ClearCars clears all "cars" edges to the Car entity.
+func (uuo *UserUpdateOne) ClearCars() *UserUpdateOne {
+	uuo.mutation.ClearCars()
+	return uuo
+}
+
+// RemoveCarIDs removes the "cars" edge to Car entities by IDs.
+func (uuo *UserUpdateOne) RemoveCarIDs(ids ...string) *UserUpdateOne {
+	uuo.mutation.RemoveCarIDs(ids...)
+	return uuo
+}
+
+// RemoveCars removes "cars" edges to Car entities.
+func (uuo *UserUpdateOne) RemoveCars(c ...*Car) *UserUpdateOne {
+	ids := make([]string, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uuo.RemoveCarIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -295,8 +397,16 @@ func (uuo *UserUpdateOne) gremlinSave(ctx context.Context) (*User, error) {
 }
 
 func (uuo *UserUpdateOne) gremlin(id string) *dsl.Traversal {
+	type constraint struct {
+		pred *dsl.Traversal // constraint predicate.
+		test *dsl.Traversal // test matches and its constant.
+	}
+	constraints := make([]*constraint, 0, 1)
 	v := g.V(id)
 	var (
+		rv = v.Clone()
+		_  = rv
+
 		trs []*dsl.Traversal
 	)
 	if value, ok := uuo.mutation.Age(); ok {
@@ -308,6 +418,17 @@ func (uuo *UserUpdateOne) gremlin(id string) *dsl.Traversal {
 	if value, ok := uuo.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
 	}
+	for _, id := range uuo.mutation.RemovedCarsIDs() {
+		tr := rv.Clone().OutE(user.CarsLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		trs = append(trs, tr)
+	}
+	for _, id := range uuo.mutation.CarsIDs() {
+		v.AddE(user.CarsLabel).To(g.V(id)).OutV()
+		constraints = append(constraints, &constraint{
+			pred: g.E().HasLabel(user.CarsLabel).InV().HasID(id).Count(),
+			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.CarsLabel, id)),
+		})
+	}
 	if len(uuo.fields) > 0 {
 		fields := make([]interface{}, 0, len(uuo.fields)+1)
 		fields = append(fields, true)
@@ -317,6 +438,12 @@ func (uuo *UserUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.ValueMap(fields...)
 	} else {
 		v.ValueMap(true)
+	}
+	if len(constraints) > 0 {
+		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		for _, cr := range constraints[1:] {
+			v = cr.pred.Coalesce(cr.test, v)
+		}
 	}
 	trs = append(trs, v)
 	return dsl.Join(trs...)

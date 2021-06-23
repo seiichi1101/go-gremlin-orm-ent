@@ -244,6 +244,24 @@ func NameHasSuffix(v string) predicate.User {
 	})
 }
 
+// HasCars applies the HasEdge predicate on the "cars" edge.
+func HasCars() predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.OutE(CarsLabel).OutV()
+	})
+}
+
+// HasCarsWith applies the HasEdge predicate on the "cars" edge with a given conditions (other predicates).
+func HasCarsWith(preds ...predicate.Car) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		tr := __.InV()
+		for _, p := range preds {
+			p(tr)
+		}
+		t.OutE(CarsLabel).Where(tr).OutV()
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(func(tr *dsl.Traversal) {

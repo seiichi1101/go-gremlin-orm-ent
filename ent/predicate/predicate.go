@@ -6,5 +6,8 @@ import (
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
 )
 
+// Car is the predicate function for car builders.
+type Car func(*dsl.Traversal)
+
 // User is the predicate function for user builders.
 type User func(*dsl.Traversal)

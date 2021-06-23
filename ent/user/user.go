@@ -11,6 +11,10 @@ const (
 	FieldAge = "age"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// EdgeCars holds the string denoting the cars edge name in mutations.
+	EdgeCars = "cars"
+	// CarsLabel holds the string label denoting the cars edge type in the database.
+	CarsLabel = "user_cars"
 )
 
 var (

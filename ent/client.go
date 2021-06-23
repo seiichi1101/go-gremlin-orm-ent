@@ -8,15 +8,20 @@ import (
 	"log"
 	"net/url"
 
+	"gremlin-orm-sample/ent/car"
 	"gremlin-orm-sample/ent/user"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/gremlin"
+	"entgo.io/ent/dialect/gremlin/graph/dsl"
+	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 )
 
 // Client is the client that holds all ent builders.
 type Client struct {
 	config
+	// Car is the client for interacting with the Car builders.
+	Car *CarClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -31,6 +36,7 @@ func NewClient(opts ...Option) *Client {
 }
 
 func (c *Client) init() {
+	c.Car = NewCarClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -74,6 +80,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:    ctx,
 		config: cfg,
+		Car:    NewCarClient(cfg),
 		User:   NewUserClient(cfg),
 	}, nil
 }
@@ -81,7 +88,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		User.
+//		Car.
 //		Query().
 //		Count(ctx)
 //
@@ -104,7 +111,98 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Car.Use(hooks...)
 	c.User.Use(hooks...)
+}
+
+// CarClient is a client for the Car schema.
+type CarClient struct {
+	config
+}
+
+// NewCarClient returns a client for the Car from the given config.
+func NewCarClient(c config) *CarClient {
+	return &CarClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `car.Hooks(f(g(h())))`.
+func (c *CarClient) Use(hooks ...Hook) {
+	c.hooks.Car = append(c.hooks.Car, hooks...)
+}
+
+// Create returns a create builder for Car.
+func (c *CarClient) Create() *CarCreate {
+	mutation := newCarMutation(c.config, OpCreate)
+	return &CarCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Car entities.
+func (c *CarClient) CreateBulk(builders ...*CarCreate) *CarCreateBulk {
+	return &CarCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Car.
+func (c *CarClient) Update() *CarUpdate {
+	mutation := newCarMutation(c.config, OpUpdate)
+	return &CarUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CarClient) UpdateOne(ca *Car) *CarUpdateOne {
+	mutation := newCarMutation(c.config, OpUpdateOne, withCar(ca))
+	return &CarUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CarClient) UpdateOneID(id string) *CarUpdateOne {
+	mutation := newCarMutation(c.config, OpUpdateOne, withCarID(id))
+	return &CarUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Car.
+func (c *CarClient) Delete() *CarDelete {
+	mutation := newCarMutation(c.config, OpDelete)
+	return &CarDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *CarClient) DeleteOne(ca *Car) *CarDeleteOne {
+	return c.DeleteOneID(ca.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *CarClient) DeleteOneID(id string) *CarDeleteOne {
+	builder := c.Delete().Where(car.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CarDeleteOne{builder}
+}
+
+// Query returns a query builder for Car.
+func (c *CarClient) Query() *CarQuery {
+	return &CarQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Car entity by its id.
+func (c *CarClient) Get(ctx context.Context, id string) (*Car, error) {
+	return c.Query().Where(car.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CarClient) GetX(ctx context.Context, id string) *Car {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CarClient) Hooks() []Hook {
+	return c.hooks.Car
 }
 
 // UserClient is a client for the User schema.
@@ -190,6 +288,17 @@ func (c *UserClient) GetX(ctx context.Context, id string) *User {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCars queries the cars edge of a User.
+func (c *UserClient) QueryCars(u *User) *CarQuery {
+	query := &CarQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *dsl.Traversal, _ error) {
+
+		fromV = g.V(u.ID).OutE(user.CarsLabel).InV()
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

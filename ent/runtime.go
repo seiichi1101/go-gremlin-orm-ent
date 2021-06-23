@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"gremlin-orm-sample/ent/car"
 	"gremlin-orm-sample/ent/schema"
 	"gremlin-orm-sample/ent/user"
 )
@@ -11,6 +12,12 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	carFields := schema.Car{}.Fields()
+	_ = carFields
+	// carDescID is the schema descriptor for id field.
+	carDescID := carFields[0].Descriptor()
+	// car.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	car.IDValidator = carDescID.Validators[0].(func(string) error)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescAge is the schema descriptor for age field.

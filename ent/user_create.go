@@ -10,7 +10,9 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
+	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
+	"entgo.io/ent/dialect/gremlin/graph/dsl/p"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -44,6 +46,21 @@ func (uc *UserCreate) SetNillableName(s *string) *UserCreate {
 func (uc *UserCreate) SetID(s string) *UserCreate {
 	uc.mutation.SetID(s)
 	return uc
+}
+
+// AddCarIDs adds the "cars" edge to the Car entity by IDs.
+func (uc *UserCreate) AddCarIDs(ids ...string) *UserCreate {
+	uc.mutation.AddCarIDs(ids...)
+	return uc
+}
+
+// AddCars adds the "cars" edges to the Car entity.
+func (uc *UserCreate) AddCars(c ...*Car) *UserCreate {
+	ids := make([]string, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uc.AddCarIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -145,6 +162,11 @@ func (uc *UserCreate) gremlinSave(ctx context.Context) (*User, error) {
 }
 
 func (uc *UserCreate) gremlin() *dsl.Traversal {
+	type constraint struct {
+		pred *dsl.Traversal // constraint predicate.
+		test *dsl.Traversal // test matches and its constant.
+	}
+	constraints := make([]*constraint, 0, 1)
 	v := g.AddV(user.Label)
 	if id, ok := uc.mutation.ID(); ok {
 		v.Property(dsl.ID, id)
@@ -155,7 +177,21 @@ func (uc *UserCreate) gremlin() *dsl.Traversal {
 	if value, ok := uc.mutation.Name(); ok {
 		v.Property(dsl.Single, user.FieldName, value)
 	}
-	return v.ValueMap(true)
+	for _, id := range uc.mutation.CarsIDs() {
+		v.AddE(user.CarsLabel).To(g.V(id)).OutV()
+		constraints = append(constraints, &constraint{
+			pred: g.E().HasLabel(user.CarsLabel).InV().HasID(id).Count(),
+			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.CarsLabel, id)),
+		})
+	}
+	if len(constraints) == 0 {
+		return v.ValueMap(true)
+	}
+	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	for _, cr := range constraints[1:] {
+		tr = cr.pred.Coalesce(cr.test, tr)
+	}
+	return tr
 }
 
 // UserCreateBulk is the builder for creating many User entities in bulk.

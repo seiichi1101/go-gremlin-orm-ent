@@ -25,6 +25,8 @@ type UserQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.User
+	// eager-loading edges.
+	withCars *CarQuery
 	// intermediate query (i.e. traversal path).
 	gremlin *dsl.Traversal
 	path    func(context.Context) (*dsl.Traversal, error)
@@ -59,6 +61,20 @@ func (uq *UserQuery) Unique(unique bool) *UserQuery {
 func (uq *UserQuery) Order(o ...OrderFunc) *UserQuery {
 	uq.order = append(uq.order, o...)
 	return uq
+}
+
+// QueryCars chains the current query on the "cars" edge.
+func (uq *UserQuery) QueryCars() *CarQuery {
+	query := &CarQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *dsl.Traversal, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		gremlin := uq.gremlinQuery(ctx)
+		fromU = gremlin.OutE(user.CarsLabel).InV()
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first User entity from the query.
@@ -242,10 +258,22 @@ func (uq *UserQuery) Clone() *UserQuery {
 		offset:     uq.offset,
 		order:      append([]OrderFunc{}, uq.order...),
 		predicates: append([]predicate.User{}, uq.predicates...),
+		withCars:   uq.withCars.Clone(),
 		// clone intermediate query.
 		gremlin: uq.gremlin.Clone(),
 		path:    uq.path,
 	}
+}
+
+// WithCars tells the query-builder to eager-load the nodes that are connected to
+// the "cars" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithCars(opts ...func(*CarQuery)) *UserQuery {
+	query := &CarQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withCars = query
+	return uq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
