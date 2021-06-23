@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"entgo.io/ent/dialect"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -20,17 +21,14 @@ func main() {
 
 	ctx := context.Background()
 
-	id := "dummyId"
-	age := 32
-	name := "seiichi"
-	u, err := CreateUser(ctx, client, id, age, name)
+	u, err := CreateUser(ctx, client, uuid.New().String(), 32, "seiichi")
 	if err != nil {
 		log.Fatalf(err.Error())
 	} else {
 		log.Println("created user: ", u)
 	}
 
-	us, err := SearchUsers(ctx, client, id)
+	us, err := QueryUsers(ctx, client, u.ID)
 	if err != nil {
 		log.Fatalf(err.Error())
 	} else {
@@ -51,7 +49,7 @@ func CreateUser(ctx context.Context, client *ent.Client, id string, age int, nam
 	return u, nil
 }
 
-func SearchUsers(ctx context.Context, client *ent.Client, id string) ([]*ent.User, error) {
+func QueryUsers(ctx context.Context, client *ent.Client, id string) ([]*ent.User, error) {
 	us, err := client.User.
 		Query().
 		Where(user.IDEQ(id)).
